@@ -1,0 +1,194 @@
+openapi: 3.0.0
+info:
+  description: "Golang microservices template build with echo server."
+  version: 1.0.1
+  title: api-bootstrap-echo
+  contact:
+    email: aarteaga@occ.com.mx
+tags:
+  - name: bootstrap
+    description: Endpoints for bootstrap management
+  - name: healthcheck
+    description: Health check resources
+  - name: metrics
+    description: Prometheus metrics resource
+externalDocs:
+  description: Find out more about api-bootstrap-echo
+  url: github.com/occmundial/api-bootstrap-echo
+servers:
+  - url: http://localhost:4001
+    description: LOCAL
+paths:
+  "/bootstrap/endpoint/{id}":
+    get:
+      tags:
+        - bootstrap
+      summary: Get bootstrap by id
+      description: Get bootstrap by id
+      operationId: GetFlowStatus
+      parameters:
+        - name: id
+          in: path
+          description: The bootstrap id
+          required: true
+          schema:
+            type: integer
+            example: 12345
+      responses:
+        "200":
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bootstrap"
+  "/bootstrap/endpoint":
+    post:
+      tags:
+        - bootstrap
+      summary: Create a new bootstrap
+      description:  Create a new bootstrap
+      operationId: CreateBootstrap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Bootstrap'
+      responses:
+        "201":
+          description: Created. The bootstrap was successfully created.
+  "/health":
+    get:
+      tags:
+        - healthcheck
+      summary: Get the health of the service
+      description: Get the health of the service
+      operationId: GetHealth
+      responses:
+        "200":
+          description: OK. Everything is fine.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  "/health/dependencies":
+    get:
+      tags:
+        - healthcheck
+      summary: Get the health of the service and its dependencies
+      description: Get the health of the service and its dependencies
+      operationId: GetHealthWithDependencies
+      responses:
+        "200":
+          description: OK. Everything is fine.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthDependenciesResponse"
+        "504":
+          description: Gateway Timeout. A problem ocurred while requesting dependencies.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthDependenciesResponse"
+              example:
+                componentName: api-bootstrap-echo
+                status: fail
+                version: "1.12.5e65764"
+                "output": Service is down
+                dependencies:
+                  - componentName: database
+                    status: fail
+                    componentType: repository
+                    output: "Error connecting to 10.10.30.77:1433 :: caused by :: Connection refused"
+                    critical: true
+  "/metrics":
+    get:
+      tags:
+        - metrics
+      summary: Get the prometheus metrics
+      description: Get the prometheus metrics
+      operationId: GetMetrics
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  # HELP echo_request_duration_seconds The HTTP request latencies in seconds.
+                  # TYPE echo_request_duration_seconds histogram
+                  echo_request_duration_seconds_bucket{code="200",method="GET",url="/bootstrap/endpoint/:id",le="0.005"} 2
+components:
+  schemas:
+    Bootstrap:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12345
+        title:
+          type: string
+          example: Ingeniero en Sistemas
+        description:
+          type: string
+          example: Se busca ingeniero en sistemas
+    HealthResponse:
+      type: object
+      properties:
+        componentName:
+          type: string
+          example: api-bootstrap-echo
+        status:
+          type: string
+          example: pass
+        version:
+          type: string
+          example: 1.12.5e65764
+    HealthDependenciesResponse:
+      type: object
+      properties:
+        componentName:
+          type: string
+          example: api-bootstrap-echo
+        status:
+          type: string
+          description: Component status
+          example: pass
+          enum:
+            - pass
+            - warn
+            - fail
+        version:
+          type: string
+          example: 1.12.5e65764
+        output:
+          type: string
+          example: "Service is UP"
+        dependencies:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthDependency"
+    HealthDependency:
+      type: object
+      properties:
+        componentName:
+          type: string
+          example: database
+        status:
+          type: string
+          example: pass
+          enum:
+            - pass
+            - warn
+            - fail
+        componentType:
+          type: string
+          example: repository
+        output:
+          type: string
+          example: "Everything is fine"
+        critical:
+          type: boolean
+          example: true
